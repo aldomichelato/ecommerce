@@ -8,7 +8,11 @@ $app->config('debug', true);
 
 $app->get('/', function() {
     
-	echo "OK-unidadeC";
+	$sql = new Hcode\DB\Sql();
+
+	$results = $sql->select("SELECT * FROM TB_USERS");
+
+	echo json_encode($results);
 
 });
 
