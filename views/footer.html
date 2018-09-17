@@ -83,7 +83,7 @@
     
     <!-- jQuery sticky menu -->
     <script src="/res/site/js/owl.carousel.min.js"></script>
-    <script src="js/jquery.sticky.js"></script>
+    <script src="/res/site/js/jquery.sticky.js"></script>
     
     <!-- jQuery easing -->
     <script src="/res/site/js/jquery.easing.1.3.min.js"></script>
