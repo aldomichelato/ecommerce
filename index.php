@@ -57,14 +57,18 @@ $app->get('/admin/logout', function(){
 	exit;
 	
 });
-
+//lista os usuarios
 $app->get("/admin/users", function(){
 
-	User::verifyLogin();
+	User::verifyLogin(); //precisa estar logado 
+
+	$users = User::listAll(); //metodo que lista todos os usuarios
 
 	$page = new PageAdmin();
 
-	$page->setTpl("users");
+	$page->setTpl("users", array(
+		"users"=>$users
+	));
 
 });
 
@@ -74,7 +78,22 @@ $app->get("/admin/users/create", function(){
 
 	$page = new PageAdmin();
 
-	$page->setTpl("users");
+	$page->setTpl("users-create");
+
+});
+
+$app->get("/admin/users/:iduser/delete", function($iduser) {//rota para salvar
+
+		User::verifyLogin();
+
+		$user = new User();
+
+	   $user->get((int)$iduser);
+
+	   $user->delete();
+
+	   header("Location: /admin/users");
+	   exit;
 
 });
 
@@ -82,30 +101,137 @@ $app->get("/admin/users/:iduser", function($iduser){ //recebe o id para carregar
 
 	User::verifyLogin();
 
+	$user = new User();
+
+	$user->get((int)$iduser);
+
 	$page = new PageAdmin();
 
-	$page->setTpl("users");
+	$page->setTpl("users-update", array(
+		"user"=>$user->getValues()
+    ));
 
 });
 
-$app->post("/admin/users/create", function() {//rota para salvar
+$app->post("/admin/users/create", function () {
 
-		User::verifyLogin();
+    User::verifyLogin();
+
+    $user = new User();
+
+    $_POST["inadmin"] = (isset($_POST["inadmin"])) ? 1 : 0;
+
+    $_POST['despassword'] = password_hash($_POST["despassword"], PASSWORD_DEFAULT, ["cost"=>12]);
+
+    $user->setData($_POST);
+
+    $user->save();
+
+    header("Location: /admin/users");
+
+    exit;
+});
+
+$app->post("/admin/users/create", function () {
+    User::verifyLogin();
+    $user = new User();
+    $_POST["inadmin"] = (isset($_POST["inadmin"])) ? 1 : 0;
+    $_POST['despassword'] = password_hash($_POST["despassword"], PASSWORD_DEFAULT, [
+        "cost"=>12
+    ]);
+    $user->setData($_POST);
+    $user->save();
+    header("Location: /admin/users");
+    exit;
+});
+$app->post("/admin/users/:iduser", function($iduser){
+
+	User::verifyLogin();
+
+	$user = new User();
+
+	$_POST["inadmin"] = (isset($_POST["inadmin"]))?1:0;
+
+	$user->get((int)$iduser);
+
+	$user->setData($_POST);
+
+	$user->update();
+
+	header("Location: /admin/users");
+	exit;
 
 });
 
-$app->post("/admin/users/:iduser", function() {//rota para salvar
+$app->get("/admin/forgot", function(){
 
-		User::verifyLogin();
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+
+	$page->setTpl("forgot");
 
 });
 
-$app->delete("/admin/users/iduser", function() {//rota para salvar
+$app->post("/admin/forgot", function(){
 
-		User::verifyLogin();
+	$user = User::getForgot($_POST["email"]);
+
+	header("Location: /admin/forgot/sent");
+	exit;
 
 });
 
+$app->get("/admin/forgot/sent", function(){
+
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+
+	$page->setTpl("forgot-sent");
+
+});
+
+
+$app->get("/admin/forgot/reset", function(){
+
+	$user = User::validForgotDecrypt($_GET["code"]);
+
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false	
+	]);
+
+	$page->setTpl("forgot-reset", array(
+		"name"=>$user["desperson"],
+		"code"=>$_GET["code"]
+	));
+});
+
+$app->post("/admin/forgot/reset", function(){
+
+	$forgot = User::validForgotDecrypt($_POST["code"]);
+
+	User::setForgotUsed($forgot["idrecovery"]);
+
+	$user = new User();
+
+	$user->get((int)$forgot["iduser"]);
+
+	$password = password_hash($_POST["password"], PASSWORD_DEFAULT, ["cost"=>12]);
+
+	$user->setPassword($password);
+
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false	
+	]);
+
+	$page->setTpl("forgot-reset-success");
+
+});
 
 $app->run();
 

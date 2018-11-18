@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace Hcode;
 
@@ -46,4 +46,5 @@ class Model {
 
 }
 
-?>
+
+ ?>
