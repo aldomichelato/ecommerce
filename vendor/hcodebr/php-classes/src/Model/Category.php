@@ -73,6 +73,65 @@ class Category extends Model{
 		file_put_contents($_SERVER['DOCUMENT_ROOT'].DIRECTORY_SEPARATOR."views".DIRECTORY_SEPARATOR."categories-menu.html", implode('',$html)); //implode p fazer a string
 
 	}
+	/* method para trazer todos os produtos do BD na tela Adm 
+     * por padrão o boleano $related = true, trará todos que 
+     * estão relacionados com a categoria do produto.
+     */
+    public function getProducts($related = true)
+    {
+        $sql = new Sql();
+        if ($related === true) {
+            return $sql->select("
+                SELECT * FROM tb_products WHERE idproduct IN(
+                    SELECT a.idproduct
+                    FROM tb_products a
+                    INNER JOIN tb_productscategories b ON a.idproduct = b.idproduct
+                    WHERE b.idcategory = :idcategory
+                );
+            ", [
+                ':idcategory'=>$this->getidcategory()
+            ]);
+        } else {
+            return $sql->select("
+                SELECT * FROM tb_products WHERE idproduct NOT IN(
+                    SELECT a.idproduct
+                    FROM tb_products a
+                    INNER JOIN tb_productscategories b ON a.idproduct = b.idproduct
+                    WHERE b.idcategory = :idcategory
+                );
+            ", [
+                ':idcategory'=>$this->getidcategory()
+            ]);
+        }
+    }
+
+   public function addProduct(Product $product)
+    {
+        $sql = new Sql();
+
+        $sql->query("INSERT INTO tb_productscategories (idcategory, idproduct) VALUES(:idcategory, :idproduct)", [
+            ':idcategory'=>$this->getidcategory(),
+            ':idproduct'=>$product->getidproduct()
+        ]);
+
+    }
+
+    public function removeProduct(Product $product)
+    {
+        $sql = new Sql();
+
+        $sql->query("DELETE FROM tb_productscategories 
+            WHERE
+            idcategory  = :idcategory
+            AND
+            idproduct   = :idproduct", [
+                ':idcategory'   =>$this->getidcategory(),
+                ':idproduct'    =>$product->getidproduct()
+            ]);
+
+    }
+
+
 }
 				
 
