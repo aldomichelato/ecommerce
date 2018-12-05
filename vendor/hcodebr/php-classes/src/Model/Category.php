@@ -79,6 +79,7 @@ class Category extends Model{
      */
     public function getProducts($related = true)
     {
+
         $sql = new Sql();
         if ($related === true) {
             return $sql->select("
@@ -91,6 +92,7 @@ class Category extends Model{
             ", [
                 ':idcategory'=>$this->getidcategory()
             ]);
+
         } else {
             return $sql->select("
                 SELECT * FROM tb_products WHERE idproduct NOT IN(
@@ -102,10 +104,49 @@ class Category extends Model{
             ", [
                 ':idcategory'=>$this->getidcategory()
             ]);
+
         }
+
     }
 
-   public function addProduct(Product $product)
+    public function getProductsPage($page = 1, $itemsPerPage = 3)
+    {
+        $start = ($page - 1) * $itemsPerPage;
+        $sql = new Sql();
+        $results = $sql->select("
+            SELECT SQL_CALC_FOUND_ROWS *
+            FROM tb_products a
+            INNER JOIN tb_productscategories b ON a.idproduct = b.idproduct
+            INNER JOIN tb_categories c ON c.idcategory = b.idcategory
+            WHERE c.idcategory = :idcategory
+            LIMIT $start, $itemsPerPage;
+        ", [
+            ':idcategory'=>$this->getidcategory()
+        ]);
+
+         /* Verifica quantos itens há na categoria */
+        $resultTotal = $sql->select("SELECT FOUND_ROWS() AS nrtotal;");
+        return [
+            /*
+             * $results: está guardando os dados do produto
+             */
+            'data'=>Product::checkList($results),
+            /*
+             * [0]: traga a partir da posição "0 (Zero)"
+             * ["nrtotal"]: Traga a coluna total
+             */
+            'total'=>(int)$resultTotal[0]["nrtotal"],
+            /*
+             * Quantas páginas foram geradas;
+             * ceil: arredonta para inteiro =>
+             * Exemplo: Se temos 11 registros e devem aparecer 10 por página
+             * o último registro não apareceria.
+             */
+            'pages'=>ceil($resultTotal[0]["nrtotal"] / $itemsPerPage)
+        ];
+    }
+
+    public function addProduct(Product $product)
     {
         $sql = new Sql();
 
