@@ -40,7 +40,7 @@ $app->get("/categories/:idcategory", function($idcategory){
 	for ($i=1; $i <= $pagination['pages']; $i++) { 
     array_push($pages, [
         'link'=>'/categories/'.$category->getidcategory().'?page='.$i,
-	'page'=>$i
+		'page'=>$i
     ]);
 	}
 /* 
@@ -59,6 +59,22 @@ $app->get("/categories/:idcategory", function($idcategory){
 		'pages'=>$pages
 	]);
 });
+
+//::::::::::::Route URL
+$app->get("/products/:desurl", function($desurl){
+	$product = new Product();
+	$product->getFromURL($desurl);
+	$page = new Page;
+	$page->setTpl("product-detail", [
+		'product'=>$product->getValues(),
+		/* 
+		 * Mostrar a qual categoria o produto pertence. 
+		 * Template usuario/categorias
+		 */
+		'categories'=>$product->getCategories()
+	]);
+});
+
 
 
 ?>
