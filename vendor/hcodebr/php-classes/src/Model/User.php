@@ -9,16 +9,71 @@ use \Hcode\Mailer;
 class User extends Model{
 
 	const SESSION = "User";
-	const SECRET = "HcodePhp7_Secret";
+    const SECRET = "HcodePhp7_Secret";
+    const ERROR = "UserError";
+    const ERROR_REGISTER = "UserErrorRegister";
+    const SUCCESS = "UserSuccess";
+
+
+	public static function getFromSession()
+	{
+		$user = new User();
+
+		if(isset($_SESSION[User::SESSION]) && (int)$_SESSION[User::SESSION]['iduser'] > 0){ // verifica se a sessao existe o i i user eh maior que zero
+
+			$user->setData($_SESSION[User::SESSION]); // carrega o usuario
+
+		}
+
+		return $user;
+
+	}
+
+
+	public static function checkLogin($inadmin = true) //metodo que verifica se o usuario esta logado
+	{
+		if(
+			!isset($_SESSION[User::SESSION]) //vefica se a session do usuario não for definida
+			||
+			!$_SESSION[User::SESSION]  //se ela for falsa
+			||
+			!(int)$_SESSION[User::SESSION]["iduser"] > 0//se o id nao for maior que 0 é um usuario
+			){
+
+			//não esta logado
+			return false;
+
+		}else{
+			//esse if só acontece se ele tentar acessar uma rota de administrador
+			if($inadmin === true && (bool)$_SESSION[User::SESSION]["inadmin"] === true){
+
+				return true;
+
+			} else if($inadmin === false){ //esta logado 
+
+				return true;
+
+			} else {
+
+				return false;
+			}
+
+		}
+
+	}
 
 	public static function login($login, $password)
 	{
 
 		$sql = new Sql();
         
-		$results = $sql->select("SELECT * FROM tb_users where deslogin = :LOGIN", array(
+		/*$results = $sql->select("SELECT * FROM tb_users where deslogin = :LOGIN", array(
 			":LOGIN"=>$login
-	    ));
+	    ));*/
+
+	     $results = $sql->select("SELECT * FROM tb_users a INNER JOIN tb_persons b ON a.idperson = b.idperson WHERE a.deslogin = :LOGIN", array(
+            ":LOGIN" => $login
+        ));
 
 		if(count($results) === 0)
 		{
@@ -44,24 +99,25 @@ class User extends Model{
 	}
 
 
-	public static function verifyLogin($inadmin = true) //verifica s esta logado ou não
-	{
+	public static function verifyLogin($inadmin = true){
 
-		if(
-			!isset($_SESSION[User::SESSION]) //vefica se a session não for definida
-			||
-			!$_SESSION[User::SESSION]  //se ela for falsa
-			||
-			!(int)$_SESSION[User::SESSION]["iduser"] > 0//se o id nao for maior que 0 é um usuario
-			||
-			(bool)$_SESSION[User::SESSION]["inadmin"] !== $inadmin// verifica se é admin
-			) {
+        if (!User::checkLogin($inadmin)) {
 
-			    header("Location: /admin/login");  //se ela nao for definida vai para a tela de login
-			    exit;
+            if ($inadmin) {
 
-			}
-	}
+                header("Location: /admin/login");
+
+            } else {
+
+                header("Location: /login");
+
+            }
+
+            exit;
+
+        }
+
+    }
 
 	public static function logout()
 	{
@@ -79,25 +135,23 @@ class User extends Model{
 
 	}
 
-	public function save()
-	{
-		$sql = new Sql();
-		
-		$results = $sql->select("CALL sp_users_save(:desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)",
-		//                      CALL `db_ecommerce`.`sp_users_save`('1', 'aldo', 'admin', 'aldo@uol.com', 35232087, 1);	
-		array(
-			":desperson"=>$this->getdesperson(),  //esses get foram gerados pelo getData
-			":deslogin"=>$this->getdeslogin(), 
-			":despassword"=>$this->getdespassword(), 
-			":desemail"=>$this->getdesemail(),  
-			":nrphone"=>$this->getnrphone(),  
-			":inadmin"=>$this->getinadmin() 
-		));
+	public function save() { //Cria um novo usuário no Banco de Dados
+        $sql = new Sql();
+        $results = $sql->select("CALL sp_users_save(:desperson, :deslogin, :despassword, :desemail, :nrphone, :desinadmin)",
+        						 //CALL `db_ecommerce`.`sp_users_save`('1', 'aldo', 'admin', 'aldo@uol.com', 35232087, 1);	
+        array(
+            ":desperson" => utf8_encode($this->getdesperson()),
+            ":deslogin" => $this->getdeslogin(),
+            ":despassword" => User::getPasswordHash($this->getdespassword()),
+            ":desemail" => $this->getdesemail(),
+            ":nrphone" => $this->getnrphone(),
+            ":desinadmin" => $this->getinadmin()
+        ));
+        $data = $results[0];
+        $this->setData($data);
+    }
 
-		$this->setData($results[0]);
-
-	}
-
+	
 	public function get($iduser)
 	{
 
@@ -174,10 +228,10 @@ class User extends Model{
 	             $code = openssl_encrypt($dataRecovery['idrecovery'], 'aes-256-cbc', User::SECRET, 0, $iv);
 	             $result = base64_encode($iv.$code);
 	             if ($inadmin === true) {
-	                 $link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$result";
+	                 $link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$result"; //link da administração
 	             } else {
-	                 $link = "http://www.hcodecommerce.com.br/forgot/reset?code=$result";
-	             } 
+	                 $link = "http://www.hcodecommerce.com.br/forgot/reset?code=$result"; // link do usuario comum
+	             }  
 	             $mailer = new Mailer($data['desemail'], $data['desperson'], "Redefinir senha da Hcode Store", "forgot", array(
 	                 "name"=>$data['desperson'],
 	                 "link"=>$link
@@ -243,7 +297,63 @@ class User extends Model{
 
 	 }
 
+	 public static function setError($msg) {
+        $_SESSION[User::ERROR] = $msg;
+     }
+
+     public static function getError() {
+         $msg = (isset($_SESSION[User::ERROR]) && $_SESSION[User::ERROR]) ? $_SESSION[User::ERROR] : '';
+         User::clearError();
+         return $msg;
+     }
+
+     public static function clearError() {
+         $_SESSION[User::ERROR] = NULL;
+     }
+
+     public static function setErrorRegister($msg) {
+         $_SESSION[User::ERROR_REGISTER] = $msg;
+     }
+
+     public static function getErrorRegister() {
+         $msg = (isset($_SESSION[User::ERROR_REGISTER]) && $_SESSION[User::ERROR_REGISTER]) ? $_SESSION[User::ERROR_REGISTER] : '';
+         User::clearErrorRegister();
+         return $msg;
+     }
+
+     public static function clearErrorRegister() {
+         $_SESSION[User::ERROR_REGISTER] = NULL;
+     }
+
+     public static function checkLoginExist($login) {
+         $sql = new Sql();
+         $results = $sql->select("SELECT * FROM tb_users WHERE deslogin = :deslogin", [
+             ':deslogin' => $login
+         ]);
+         return (count($results) > 0);
+     }
+
+     public static function getPasswordHash($password) {
+         return password_hash($password, PASSWORD_DEFAULT, [
+             'cost' => 12
+         ]);
+     }
+
+     public static function setSuccess($msg) {
+         $_SESSION[User::SUCCESS] = $msg;
+     }
+     
+     public static function getSuccess() {
+         $msg = (isset($_SESSION[User::SUCCESS]) && $_SESSION[User::SUCCESS]) ? $_SESSION[User::SUCCESS] : '';
+         User::clearSuccess();
+         return $msg;
+     }
+     
+      public static function clearSuccess() {
+        $_SESSION[User::SUCCESS] = NULL;
+   	 }
+
+
 }
-				
 
 ?>

@@ -43,6 +43,7 @@ $app->get("/admin/users/:iduser/delete", function($iduser) {//rota para salvar
 });
 
 $app->get("/admin/users/:iduser", function($iduser){ //recebe o id para carregar o formulario do usuario ja preenchido
+
 	User::verifyLogin();
 
 	$user = new User();
@@ -71,7 +72,9 @@ $app->post("/admin/users/create", function () {
     $user->save();
 
     header("Location: /admin/users");
+    
     exit;
+
 });
 
 
