@@ -9,13 +9,15 @@ class Page{
     private $tpl; //private outras classes nao tem acesso
     private $options = [];
     private $defaults = [
+        "header"=>true, //cabeçalho é true (vai aparecer)
+        "footer"=>true, //rodapé também
         "data"=>[]
 
     ];
 
     public function __construct($opts = array(), $tpl_dir = "/views/"){
         
-        $this->options = array_merge($this->defaults, $opts); //
+        $this->options = array_merge($this->defaults, $opts); // array_merge - Combina um ou mais arrays
 
         $config = array(
             "tpl_dir"       => $_SERVER["DOCUMENT_ROOT"].$tpl_dir,
@@ -29,7 +31,7 @@ class Page{
 
         $this->setData($this->options["data"]);
 
-        $this->tpl->draw("header"); //chama na tela
+        if($this->options["header"] === true) $this->tpl->draw("header"); //chama na tela
 
     }
 
@@ -51,7 +53,7 @@ class Page{
 
     public function __destruct(){
         
-        $this->tpl->draw("footer");
+        if($this->options["footer"] === true) $this->tpl->draw("footer"); //chama na tela
     }
 
 
