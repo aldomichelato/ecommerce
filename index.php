@@ -1,5 +1,5 @@
 <?php 
-session_start();
+session_start(); //sessão rodando no php
 require_once("vendor/autoload.php");
 
 use \Slim\Slim;
@@ -49,12 +49,60 @@ $app->post('/admin/login', function(){  //rota post
 
 });
 
-$app->get('/admin/logout', function() {
+$app->get('/admin/logout', function() { //rota de logout
 
-	User::logout();
+	User::logout(); //chama a sessão logout
 
-	header("Location: /admin/login");
+	header("Location: /admin/login"); // chama a tela de login
 	exit;
+
+});
+
+$app->get('/admin/users', function() {
+
+	 User::VerifyLogin();
+
+	$page = new PageAdmin();
+
+	$page->setTpl("users");
+
+});
+
+$app->get('/admin/users/create', function() {
+
+	 User::VerifyLogin();
+
+	$page = new PageAdmin();
+
+	$page->setTpl("users-create");
+
+});
+
+$app->get('/admin/user/:iduser', function($iduser) {  //o valor que vem no :user é o que é recebido na função
+
+	 User::VerifyLogin();
+
+	$page = new PageAdmin();
+
+	$page->setTpl("users-update");
+
+});
+
+$app->post('/admin/users/create', function() {  //o valor que vem no :user é o que é recebido na função
+
+	 User::VerifyLogin();
+
+});
+
+$app->post('/admin/user/:iduser', function($iduser) {  //o valor que vem no :user é o que é recebido na função
+
+	 User::VerifyLogin();
+
+});
+
+$app->delete('/admin/user/:iduser', function($iduser) {  //o valor que vem no :user é o que é recebido na função
+
+	 User::VerifyLogin();
 
 });
 
